@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace ClusterAnalysis.Tests
 {
     [TestClass]
-    public class UnitTest1
+    public class ClusterAlgorithmTests
     {
 
         [TestMethod]
@@ -37,23 +37,7 @@ namespace ClusterAnalysis.Tests
 
             Assert.IsTrue(true);
         }
-
-        [TestMethod]
-        public void TestBackhusSample()
-        {
-            string fn = @"C:\Matthes\UHH\Projekte\Backhus\Filialen_clustering.csv";
-            var baseData = RawDataReader.ReadFromCsv(fn);
-            ClusterData cd = new ClusterData()
-            {
-                MaximumIterationCount = 1000,
-                NumberOfClusters = 5,
-                RandomSeed = 3238666,
-                RawData = baseData
-            };
-            var result = ClusterBuilder.Analyze(cd);
-            Trace.WriteLine(result.PrintCsvResult());
-        }
-        
+       
         public double[][] GetTestData()
         {
             double[][] testData = new double[20][];
