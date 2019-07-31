@@ -9,6 +9,7 @@ namespace ClusterAnalysis
         public ClusterResult()
         {
             Iterations = 0;
+            TerminationStatus = Status.Unknown;
         }
 
         public int[] ClusterAssignment { get; set; }
@@ -17,60 +18,12 @@ namespace ClusterAnalysis
 
         public double[][] NormalizedData { get; set; }
 
-        public double AverageClusterToPointDistance {
-            get
-            {
-                int rowCount = ClusterAssignment.Length;
-                int clusterCount = ClusterMeanValues.Length;
-                int colCount = ClusterMeanValues[0].Length;
-                //initialize
-                double[] TotalDistance = new double[clusterCount];
-                int[] pointCount = new int[clusterCount];
-                for (int row = 0; row < rowCount; row++)
-                {
-                    int cluster = ClusterAssignment[row];
-                    pointCount[cluster]++;
-                    TotalDistance[cluster] += GetDistance(ClusterMeanValues[cluster],
-                        NormalizedData[row]);
-                }
-                double total = 0;
-                for (int cl = 0; cl < clusterCount; cl++)
-                {
-                    total += TotalDistance[cl] / pointCount[cl];
-                }
-                return total / clusterCount;
-            }
-        }
-
-        private double GetDistance(double[] v1, double[] v2)
-        {
-            double d = 0;
-            for (int i = 0; i < v1.Length; i++)
-            {
-                d += (v1[i] - v2[i]) * (v1[i] - v2[i]);
-            }
-            return Math.Sqrt(d);
-        }
-
-        public double AverageInterClusterDistance {
-            get
-            {
-                double dst = 0;
-                int c = ClusterMeanValues.Length;
-                for (int cl = 0; cl < c-1; cl++)
-                {
-                    for (int cl2 = 0; cl2 < c; cl2++)
-                    {
-                        dst += GetDistance(ClusterMeanValues[cl], ClusterMeanValues[cl2]);
-                    }
-                }
-                var cnx = (c * (c-1) ) / 2;
-                return dst / (double)cnx;
-            }
-        }
+        public double TotalClusterToPointDistance { get; set; }
 
         public int Iterations { get; set; }
-        
+
+        public Status TerminationStatus { get; set; }
+
         public string PrintCsvResult()
         {
             int colCount = NormalizedData[0].Length;
@@ -105,6 +58,14 @@ namespace ClusterAnalysis
             return b.ToString();
         }
 
+    }
+
+    public enum Status
+    {
+        MaxIterationsReached,
+        Convergence,
+        EmptyClusters,
+        Unknown
     }
 
 

@@ -11,13 +11,11 @@ namespace ClusterAnalysis.Tests
         [TestMethod]
         public void TestClusterAlgorithmOnExample()
         {
-            var result = ClusterBuilder.Analyze(new ClusterData()
-            {
-                MaximumIterationCount = 10000,
-                NumberOfClusters = 5,
-                RandomSeed = 1173737853,
-                RawData = GetTestData()
-            });
+            ClusterData data = new ClusterData(GetTestData(), new string[] { "X", "Y" });
+            ClusterAlgorithmOptions options = new ClusterAlgorithmOptions(5);
+
+            var result = KmeansClusterAlgorithm.Analyze(data, options);
+
             Assert.IsTrue(result.ClusterAssignment.Length > 0);
             Trace.WriteLine($"Iterations: {result.Iterations}");
             Trace.WriteLine(result.PrintCsvResult());
@@ -26,31 +24,22 @@ namespace ClusterAnalysis.Tests
         [TestMethod]
         public void TestBigSet()
         {
-            ClusterData d = new ClusterData()
+            int cols = 5;
+            int rows = 5000;
+            string[] attributes = new string[cols];
+            for (int i = 0; i < cols; i++)
             {
-                MaximumIterationCount = 10000000,
-                NumberOfClusters = 3,
-                RawData = GetRandomDataSet(5000, 5, 2000)
-            };
-            ClusterResult result = ClusterBuilder.Analyze(d);
+                attributes[i] = "Col_" + i.ToString();
+            }
+
+            ClusterAlgorithmOptions options = new ClusterAlgorithmOptions(3, true);
+            ClusterData data = new ClusterData(GetRandomDataSet(rows, cols, 2000), attributes);
+
+            ClusterResult result = KmeansClusterAlgorithm.Analyze(data,options);
+
             Assert.IsTrue(result.Iterations > 0);
             Trace.WriteLine($"Iterations: {result.Iterations}");
             Trace.WriteLine(result.PrintCsvResult());
-        }
-
-        [TestMethod]
-        public void MultipleClusterConstruction()
-        {
-            var cd = new ClusterData()
-            {
-                RawData = GetTestData(),
-                MaximumIterationCount = 10000,
-                NumberOfClusters = 1,
-                RandomSeed = 1
-            };
-            string meta = MetaClusterTester.Cluster(cd);
-            Trace.WriteLine(meta);
-            Assert.IsTrue(true);
         }
 
         [TestMethod]
@@ -58,13 +47,16 @@ namespace ClusterAnalysis.Tests
         {
             double[] means = new double[] { 3, 4, 5 };
             double[] data = new double[] { 10, 10, 10 };
+            double[] weights = new double[] { 1, 1, 1 };
             double result = 0;
+
             for (int i = 0; i < means.Length; i++)
             {
-                result = result + Math.Pow(means[i] - data[i], 2);
+                result = result + weights[i] * Math.Pow(means[i] - data[i], 2);
             }
             result = Math.Sqrt(result);
-            Assert.AreEqual(result, ClusterBuilder.GetDistance(means, data));
+
+            Assert.AreEqual(result, KmeansClusterAlgorithm.GetDistance(means, data,weights));
         }
 
         [TestMethod]
@@ -72,7 +64,7 @@ namespace ClusterAnalysis.Tests
         {
             double[] data = new double[] { -5, 10, 3, 100, -6.01, -6.02, 7, -3 };
             int expectedIndex = 5;
-            int foundIndex = ClusterBuilder.FindMinimumIndex(data);
+            int foundIndex = KmeansClusterAlgorithm.FindMinimumIndex(data);
             Assert.AreEqual(expectedIndex, foundIndex);
         }
 
@@ -80,6 +72,7 @@ namespace ClusterAnalysis.Tests
         public void Calculate_Means()
         {
             double[][] data = new double[5][];
+
             //1. cluster
             data[0] = new double[] { 2, 7 };
             data[1] = new double[] { 3, 3 };
@@ -88,13 +81,19 @@ namespace ClusterAnalysis.Tests
             data[3] = new double[] { 2, 200 };
             data[4] = new double[] { 3, 300 };
 
+
+            ClusterData cd = new ClusterData(data, new string[] { "a1", "a2" });
+            ClusterAlgorithmOptions options = new ClusterAlgorithmOptions(2, false);
+
             ClusterResult r = new ClusterResult();
             r.ClusterAssignment = new int[] { 0, 0, 1, 1, 1 };
             r.NormalizedData = data;
             r.ClusterMeanValues = new double[2][];
             r.ClusterMeanValues[0] = new double[2] { 0, 0 };
             r.ClusterMeanValues[1] = new double[2] { 0, 0 };
-            ClusterBuilder.UpdateClusterMeanValues(r);
+
+            KmeansClusterAlgorithm.UpdateClusterMeanValues(r,cd,options);
+
             double exp_First = 2.5;
             double exp_Second = 5.0;
             Assert.AreEqual(exp_First, r.ClusterMeanValues[0][0]);
@@ -108,19 +107,16 @@ namespace ClusterAnalysis.Tests
         [TestMethod]
         public void Initialize_Clusters()
         {
-            ClusterData d = new ClusterData()
+            var x = new double[10][];
+            for (int i = 0; i < x.Length; i++)
             {
-                NumberOfClusters = 3,
-                MaximumIterationCount = 10,
-                RawData = new double[10][]
-            };
-            for (int i = 0; i < d.RawData.Length; i++)
-            {
-                d.RawData[i] = new double[5];
+                x[i] = new double[5];
             }
+            ClusterData d = new ClusterData(x, new string[] { "a1", "a2", "a3", "a4", "a5" });
+            ClusterAlgorithmOptions options = new ClusterAlgorithmOptions(3, 123, true, 10);
             //should provide initialized mean values and assignment
-            ClusterResult r = new ClusterResult();
-            ClusterBuilder.InitializeClusters(d, r);
+            
+            ClusterResult r = KmeansClusterAlgorithm.InitializeClusters(d, options);
 
             int[] count = new int[3];
             for (int i = 0; i < d.RawData.Length; i++)
@@ -128,7 +124,7 @@ namespace ClusterAnalysis.Tests
                 int idx = r.ClusterAssignment[i];
                 count[idx] += 1;
             }
-            for (int i = 0; i < d.NumberOfClusters; i++)
+            for (int i = 0; i < options.NumberOfClusters; i++)
             {
                 //check if every cluster received at least one data point
                 Assert.IsTrue(count[i] > 0);
@@ -140,6 +136,10 @@ namespace ClusterAnalysis.Tests
         [TestMethod]
         public void Assign_Clusters()
         {
+            var o = new ClusterAlgorithmOptions(2);
+
+            ClusterData cd = new ClusterData(new double[3][] { new double[2], new double[2], new double[2] }, new string[2]);
+
             ClusterResult cr = new ClusterResult();
             cr.ClusterAssignment = new int[3] { 0, 1, 0 };
             cr.ClusterMeanValues = new double[2][];
@@ -149,7 +149,7 @@ namespace ClusterAnalysis.Tests
             cr.NormalizedData[0] = new double[2] { 80, 900 };
             cr.NormalizedData[1] = new double[2] { 200, 2000 };
             cr.NormalizedData[2] = new double[2] { 7, 20 };
-            ClusterBuilder.UpdateClusterAssignment(cr);
+            KmeansClusterAlgorithm.UpdateClusterAssignment(cr,cd,o);
             Assert.AreEqual(cr.ClusterAssignment[0], 0);
             Assert.AreEqual(cr.ClusterAssignment[1], 0);
             Assert.AreEqual(cr.ClusterAssignment[2], 1);

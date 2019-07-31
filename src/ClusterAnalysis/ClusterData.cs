@@ -6,18 +6,35 @@ namespace ClusterAnalysis
 {
     public class ClusterData
     {
-        public ClusterData()
+        public ClusterData(double[][] rawData, string[] attributeNames, double[] attributeWeights = null)
         {
-            RandomSeed = 3238666;
+            RawData = rawData;
+            RowCount = RawData.Length;
+            ColumnCount = RawData[0].Length;
+            if (attributeWeights != null)
+            {
+                AttributeWeights = attributeWeights;
+            }
+            else
+            {
+                AttributeWeights = new double[ColumnCount];
+                for (int col = 0; col < ColumnCount; col++)
+                {
+                    AttributeWeights[col] = 1;
+                }
+            }
+            AttributeNames = attributeNames;
         }
+               
+        public double[][] RawData { get; }
 
-        public int NumberOfClusters { get; set; }
+        public double[] AttributeWeights { get; }
 
-        public int MaximumIterationCount { get; set; }
+        public string[] AttributeNames { get; }
 
-        public int RandomSeed { get; set; }
+        public int RowCount { get; }
 
-        public double[][] RawData { get; set; }
+        public int ColumnCount { get; }
 
         public string PrintRawData()
         {
@@ -44,6 +61,4 @@ namespace ClusterAnalysis
         }
 
     }
-
-
 }

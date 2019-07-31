@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Security.Cryptography;
 
-
 namespace ClusterAnalysis
 {
     public class RandomSeedGenerator
@@ -104,6 +103,5 @@ namespace ClusterAnalysis
         private static string PASSWORD_CHARS_NUMERIC = "23456789";
         private static string PASSWORD_CHARS_SPECIAL = "@";
     }
-
 
 }
