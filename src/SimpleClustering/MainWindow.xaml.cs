@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -120,8 +121,14 @@ namespace SimpleClustering
         {
             ClusterButton.IsEnabled = false;
             LoadCsvButton.IsEnabled = false;
-            var analysis = await Task.Run(() => ClusterSolver.Cluster(clusterData, 2, 20, 50,true));
+            BusyIndication.IsActive = true;
 
+            int min = (int)ClusterCountRange.LowerValue;
+            int max = (int)(ClusterCountRange.UpperValue);
+            int runs = (int)(RandomRuns.Value.Value);
+            bool normalize = NormalizeSwitch.IsChecked.Value;
+
+            var analysis = await Task.Run(() => ClusterSolver.Cluster(clusterData, min, max, runs, normalize));
 
             OutputDataGrid.Items.Clear();
             OutputDataGrid.Columns.Clear();
@@ -146,11 +153,6 @@ namespace SimpleClustering
                 Header = "InnerCluster",
                 Binding = new Binding("InnerClusterDistance")
             });
-            OutputDataGrid.Columns.Add(new DataGridTextColumn()
-            {
-                Header = "InterCluster",
-                Binding = new Binding("InterClusterDistance")
-            });
 
             foreach (var a in analysis)
             {
@@ -160,6 +162,46 @@ namespace SimpleClustering
             ChartyMcChart.Update(analysis);
             ClusterButton.IsEnabled = true;
             LoadCsvButton.IsEnabled = true;
+            BusyIndication.IsActive = false;
+            ResultsGrid.Visibility = Visibility.Visible;
+        }
+
+        private async void ExportButton_Click(object sender, RoutedEventArgs e)
+        {
+            ClusterButton.IsEnabled = false;
+            ClusterButton.IsEnabled = false;
+            LoadCsvButton.IsEnabled = false;
+            BusyIndication.IsActive = true;
+
+            int clusters = (int)(ClusterCountRange.UpperValue);
+            if (MessageBox.Show($"Run with {clusters} Clusters?","Get Results", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                == MessageBoxResult.Yes)
+            {
+                int runs = (int)(RandomRuns.Value.Value);
+                bool normalize = NormalizeSwitch.IsChecked.Value;
+
+                var analysis = await Task.Run(() => ClusterSolver.Cluster(clusterData, clusters,clusters, runs, normalize));
+                var seed = analysis[0].BestSeed;
+                var options = new ClusterAlgorithmOptions(clusters, seed, normalize);
+                var result = await Task.Run(() =>KmeansClusterAlgorithm.Analyze(clusterData, options));
+                
+
+                SaveFileDialog saveFileDialog = new SaveFileDialog();
+                saveFileDialog.Filter = "Csv files (*.csv)|*.csv|Text files (*.txt)|*.txt";
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    using (var writer = new StreamWriter(File.Create(saveFileDialog.FileName)))
+                    {
+                        string csv = result.PrintCsvResult();
+                        writer.Write(csv);
+                    }
+                }
+            }
+            ClusterButton.IsEnabled = true;
+            ClusterButton.IsEnabled = true;
+            LoadCsvButton.IsEnabled = true;
+            BusyIndication.IsActive = false;
         }
     }
 }

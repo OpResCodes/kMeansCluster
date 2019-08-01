@@ -22,6 +22,7 @@ namespace ClusterAnalysis
                 double inner = double.MaxValue;
                 int success = 0;
                 double iter = 0;
+                int bestSeed = 0;
                 for (int i = 0; i < repetitions; i++)
                 {
                     int seed = GetSeed(RandomSeedGenerator.Generate());
@@ -30,7 +31,11 @@ namespace ClusterAnalysis
                     if (result.TerminationStatus != Status.EmptyClusters)
                     {
                         success++;
-                        inner = Math.Min(result.TotalClusterToPointDistance, inner);
+                        if(inner > result.TotalClusterToPointDistance)
+                        {
+                            inner = result.TotalClusterToPointDistance;
+                            bestSeed = seed;
+                        }
                         iter += result.Iterations;
                     }
                 }
@@ -40,8 +45,10 @@ namespace ClusterAnalysis
                 {
                     inner = -1;
                 }
-                ce[probe] = new ClusterEvaluation(c, success, Math.Round(iter / (double)repetitions, 2), Math.Round(inner, 2) );
-
+                ce[probe] = new ClusterEvaluation(c, success, 
+                    Math.Round(iter / (double)repetitions, 2),
+                    Math.Round(inner, 2),
+                    bestSeed);
             }
             return ce;
         }
@@ -62,12 +69,13 @@ namespace ClusterAnalysis
     public struct ClusterEvaluation
     {
 
-        public ClusterEvaluation(int clusters, int runs, double iterations, double innerCluster)
+        public ClusterEvaluation(int clusters, int runs, double iterations, double innerCluster, int bestSeed)
         {
             NumberOfClusters = clusters;
             NumberOfRuns = runs;
             InnerClusterDistance = innerCluster;
             Iterations = iterations;
+            BestSeed = bestSeed;
         }
 
         public int NumberOfClusters { get; }
@@ -75,6 +83,8 @@ namespace ClusterAnalysis
         public double Iterations { get; }
 
         public int NumberOfRuns { get; }
+
+        public int BestSeed { get; }
 
         public double InnerClusterDistance { get; }
 
